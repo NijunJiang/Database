@@ -1,76 +1,135 @@
 drop schema if exists zcfbnji cascade;
 create schema zcfbnji;
-/* create table bus_station in scheme zcfbnji:*/
-create table zcfbnji.bus_station (
-	bus_station_id serial not null,
-	last_repainted date not null,
-	name character varying (50) not null );
-/* add geometry column:*/
-select AddGeometryColumn('zcfbnji','bus_station','location',27700,'polygon','2');
 
-
-/* add unique constraint:*/
-
-
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
-/* create table waiting_room in scheme zcfbnji:*/
-create table zcfbnji.waiting_room (
-	waiting_room_id serial not null,
-	opening_time double precision not null,
-	closing_time double precision not null,
-	bus_station_id integer not null );
-
-/* add geometry column:*/
-select AddGeometryColumn('zcfbnji','waiting_room','location',27700,'polygon','2');
-
-
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
-/* create table air_quality_sensors in scheme zcfbnji:*/
-create table zcfbnji.air_quality_sensors (
-	sensor_id serial not null,
-	waiting_room_id integer not null,
-	sensor_installation_date integer not null,
-	sensor_make character varying (150) not null );
+--================================================================
+--/* create the farmland table */
+drop table if exists zcfbnji.farmland;
+create table zcfbnji.farmland (
+	farmland_id serial not null,
+	last_land_transfer_date date not null,
+	criticality integer not null,
+	current_land_owner character varying (100) not null );
 	
-/* add geometry column:*/
-select AddGeometryColumn('zcfbnji','air_quality_sensors','location',27700,'point','2');
+--/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','farmland','location',27700,'polygon','2');
+
+--================================================================
+
+--================================================================
+--/* create the greenhouse table */
+drop table if exists zcfbnji.greenhouse;
+create table zcfbnji.greenhouse (
+	greenhouse_id serial not null,
+	greenhouse_name character varying (100) not null,
+	farmland_id integer not null,
+	criticality integer not null,
+	material character varying (100) not null,
+	installation_date date not null,
+	crops_type character varying (100) not null
+	);
+	
+--/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','greenhouse','location_3d',27700,'POLYHEDRALSURFACE','3'); --location 3d is the greenhouse location as an asset
+select AddGeometryColumn('zcfbnji','greenhouse','location_2d',27700,'POLYGON','2'); --location 2d is the greenhouses' land cover
+--================================================================
+--================================================================
+--/* create the greenhouse_condition table */
+drop table if exists zcfbnji.greenhouse_condition;
+create table zcfbnji.greenhouse_condition
+(greenhouse_condition_id serial not null,
+greenhouse_id integer,
+cover_material_condition integer,
+frame_condition integer,
+report_date date default CURRENT_DATE,
+worker_id integer);
+
+--================================================================
+
+--================================================================
+--/* create the drip_irrigation_system table */
+drop table if exists zcfbnji.drip_irrigation_system;
+create table zcfbnji.drip_irrigation_system (
+	drip_irrigation_system_id serial not null,
+	greenhouse_id integer not null,
+	criticality integer not null,
+	manufacturer character varying (100) not null,
+	installation_date date not null,
+	coding_name character varying (100) not null
+);
+	
+--/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','drip_irrigation_system','location',27700,'LINESTRING','2');
+
+--================================================================
+
+--================================================================
+/* create the drip_irrigation_system_condition table */
+drop table if exists zcfbnji.drip_irrigation_system_condition;
+create table zcfbnji.drip_irrigation_system_condition
+(drip_irrigation_system_condition_id serial not null,
+drip_irrigation_system_id integer,
+valve_condition integer,
+pressure_gage_condition integer,
+filter_condition integer,
+drip_tubing_condition integer,
+emitter_condition integer,
+report_date date default CURRENT_DATE,
+worker_id integer);
+
+--================================================================
+
+--================================================================
+/* create the parameters table, secondary_specification could be name of the brand, manufacturer or material types */
+/* parameter name should be one of the assets */
+drop table if exists zcfbnji.parameters;
+create table zcfbnji.parameters 
+(parameter_id serial,
+parameter_type character varying (100),
+parameter_name character varying (150),
+parameter_secondary_specification character varying (150),
+parameter_numeric_quantity double precision,
+parameter_unit character varying (100),
+input_date date default CURRENT_DATE);
+	
+--================================================================
+--================================================================
+/* create the workers table */
+drop table if exists zcfbnji.workers;
+create table zcfbnji.workers
+(worker_id serial not null,
+worker_surname character varying(100) not null,
+worker_name character varying(100) not null,
+date_of_birth date not null,
+worker_position character varying(100),
+contact_email character varying(100));
+
+--================================================================
+--================================================================
+/* create the condition_description table */
+drop table if exists zcfbnji.condition_description;
+create table zcfbnji.condition_description 
+(condition_description_id serial not null,
+condition_description character varying(500));
+
+--================================================================
+--================================================================
+/* create the criticality table */
+drop table if exists zcfbnji.criticality;
+create table zcfbnji.criticality
+(criticality_id serial not null,
+criticality_description character varying(500) not null);
+
+--================================================================
 
 
 
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
-/* create table air_quality_values in scheme zcfbnji:*/
-create table zcfbnji.air_quality_values (
-	air_quality_id serial not null,
-	sensor_id integer not null,
-	total_voc double precision not null,
-	temperature double precision not null,
-	humidity double precision not null,
-	reading_timestamp date not null );
-
-
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
-create table zcfbnji.cleaners (
-	cleaner_id serial not null,
-	cleaner_name character varying (150) not null,
-	cleaner_surname character varying (100) not null,
-	date_of_birth date not null,
-	contact_number character varying (50) not null,
-	cost_per_hour double precision not null);
-
-
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
-create table zcfbnji.bus_station_cleaner (
-	bus_station_id integer not null,
-	cleaner_id integer not null,
-	bus_station_cleaner_id serial not null,
-	hours_per_week double precision not null );
 
 
 
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+
+
+
+
+
 

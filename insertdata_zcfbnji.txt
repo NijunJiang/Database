@@ -1,63 +1,380 @@
-DELETE FROM zcfbnji.cleaners;
-DELETE FROM zcfbnji.air_quality_values;
-DELETE FROM zcfbnji.air_quality_sensors;
-DELETE FROM zcfbnji.waiting_room;
-DELETE FROM zcfbnji.bus_station;
-/* %%%%%%%%%%%%%%%%%%% INSERT DATA BUS STATION %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.bus_station
-(location, name, last_repainted)
+
+--~~==============================
+
+--/*  Create the criticality data */
+
+insert into zcfbnji.criticality (criticality_id, criticality_description)
 values
-(st_geomfromtext('POLYGON((500000 500000,500000 500250,500250 500250,500250 500000,500000 500000))',27700),'Main Bus Station', '2019-3-20');
+(1, 'Quaternary, there are no short term effect and significant long term damage if it fails'),
+(2, 'Tertiary, the crops cultivated inside this farm will not be in danger within a week or there are manual replacements if it fails'),
+(3, 'Secondary, the farm will face immediate difficulties and a portion of the crops will be lost if it fails'),
+(4, 'Primary, the whole farm will cease to function and all crops will be lost if it fails');
 
-/* %%%%%%%%%%%%%%%%%%% INSERT DATA WAITING ROOM %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.waiting_room
-(bus_station_id, location, opening_time, closing_time)
+--/*  Create the condition_description data */
+insert into zcfbnji.condition_description (condition_description_id, condition_description)
 values
-((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
- st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700),
-6.3,17.3);
+(1, 'In good condition, without the need of extra maintenance or repair'),
+(2, 'In acceptable condtion, without the need of repair'),
+(3, 'In mediocre condtion, without the need of immediate repair but it may become unfunctional shortly'),
+(4, 'In bad condition, unfunctional and it needs replacement or repair'),
+(5, 'N/A, condition reporter can not determine the asset condition'),
+(6, 'Missing asset at the registered location');
 
-/* %%%%%%%%%%%%%%%%%%% INSERT AIR QUALITY SENSORS %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.air_quality_sensors
-(location, sensor_make, sensor_installation_date, waiting_room_id)
+--/*  Create the farmland data */
+insert into zcfbnji.farmland
+(location, last_land_transfer_date, criticality, current_land_owner)
 values
-(st_geomfromtext('POINT(500051 500051)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
-where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700))),
+(st_geomfromtext('POLYGON((447000 91000, 447250 91000, 447250 91250, 447000 91250, 447000 91000))',27700), '2021-1-1', '4', 'Dwight Kurt Schrute III');
 
-(st_geomfromtext('POINT(500055 500140)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
-where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700))),
-
-(st_geomfromtext('POINT(500140 500140)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
-where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700)));
-
-/* %%%%%%%%%%%%%%%%%%% INSERT AIR QUALITY VALUES %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.air_quality_values
-(sensor_id,total_voc,reading_timestamp,temperature,humidity)
+--/*  Create the greenhouse data */
+insert into zcfbnji.greenhouse
+(location_3d, location_2d ,criticality, material, installation_date, crops_type,farmland_id, greenhouse_name)
 values
-((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500051 500051)',27700)),300,'2020-04-18',33.5,75),
-((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),270,'2020-04-19',33.5,75),
-((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),170,'2020-06-18',16.5,75),
-((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),300,'2020-04-18',33.5,75),
-((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),670,'2020-06-19',17.5,75);
+(st_extrude(st_geomfromtext('POLYGON((447010 91010, 447120 91010, 447120 91120, 447010 91120, 447010 91010))',27700),0,0,5),st_geomfromtext('POLYGON((447010 91010, 447120 91010, 447120 91120, 447010 91120, 447010 91010))',27700),'3','polycarbonate','2020-3-8','potato',
+(select farmland_id from zcfbnji.farmland where current_land_owner= 'Dwight Kurt Schrute III'), 'greenhouse_1'),
 
-/* %%%%%%%%%%%%%%%%%%% INSERT CLEANER %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.cleaners
-(cleaner_name,cleaner_surname,date_of_birth,contact_number,cost_per_hour)
-values
-('Joe','Bloggs','1970-02-23','0122322122',33.5),
-('Sarah','Smith','1992-05-23','0122886673',33.5),
-('Mary','Brown','1967-02-12','0166327531',13.5);
+(st_extrude(st_geomfromtext('POLYGON((447125 91125, 447235 91125, 447235 91235, 447125 91235, 447125 91125))',27700),0,0,5),st_geomfromtext('POLYGON((447125 91125, 447235 91125, 447235 91235, 447125 91235, 447125 91125))',27700),'3','polyethylene','2017-4-12','potato',
+(select farmland_id from zcfbnji.farmland where current_land_owner= 'Dwight Kurt Schrute III'),'greenhouse_2'),
 
-/* %%%%%%%%%%%%%%%%%%% INSERT BUS STATION CLEANER %%%%%%%%%%%%%%%%%%%%%%% */
-insert into zcfbnji.bus_station_cleaner
-(bus_station_id,cleaner_id,hours_per_week)
+(st_extrude(st_geomfromtext('POLYGON((447010 91125, 447120 91125, 447120 91235, 447010 91235, 447010 91125))',27700),0,0,5),st_geomfromtext('POLYGON((447010 91125, 447120 91125, 447120 91235, 447010 91235, 447010 91125))',27700),'3','polyethylene','2017-9-13','potato',
+(select farmland_id from zcfbnji.farmland where current_land_owner= 'Dwight Kurt Schrute III'),'greenhouse_3'),
+
+(st_extrude(st_geomfromtext('POLYGON((447125 91010, 447235 91010, 447235 91120, 447125 91120, 447125 91010))',27700),0,0,5),st_geomfromtext('POLYGON((447125 91010, 447235 91010, 447235 91120, 447125 91120, 447125 91010))',27700),'3','glass','2013-12-12','pepper',
+(select farmland_id from zcfbnji.farmland where current_land_owner= 'Dwight Kurt Schrute III'),'greenhouse_4');
+
+--/*  Create the drip_irrigation_system data */
+insert into zcfbnji.drip_irrigation_system
+(greenhouse_id, criticality, manufacturer, installation_date, location, coding_name)
 values
-((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
- (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Sarah'
-and cleaner_surname = 'Smith' and date_of_birth = '1992-05-23'), 25),
-((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
- (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Mary'
-and cleaner_surname = 'Brown' and date_of_birth = '1967-02-12'), 35),
-((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
- (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Joe'
-and cleaner_surname = 'Bloggs' and date_of_birth = '1970-02-23'), 42);
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_1'),'2','brand A','2020-3-8',st_geomfromtext('LINESTRING(447050 91015, 447050 91115)',27700),'1A'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_1'),'2','brand A','2020-3-8',st_geomfromtext('LINESTRING(447080 91015, 447080 91115)',27700),'1B'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_1'),'2','brand A','2020-3-8',st_geomfromtext('LINESTRING(447100 91015, 447100 91115)',27700),'1C'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_2'),'2','brand B','2017-4-12',st_geomfromtext('LINESTRING(447145 91130, 447145 91230)',27700),'2A'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_2'),'2','brand B','2017-4-12',st_geomfromtext('LINESTRING(447165 91130, 447165 91230)',27700),'2B'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_2'),'2','brand B','2017-4-12',st_geomfromtext('LINESTRING(447230 91130, 447230 91230)',27700),'2C'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_3'),'2','brand B','2017-9-13',st_geomfromtext('LINESTRING(447050 91130, 447050 91230)',27700),'3A'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_3'),'2','brand B','2017-9-13',st_geomfromtext('LINESTRING(447080 91130, 447080 91230)',27700),'3B'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_3'),'2','brand B','2017-9-13',st_geomfromtext('LINESTRING(447110 91130, 447110 91230)',27700),'3C'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_4'),'2','brand B','2013-12-12',st_geomfromtext('LINESTRING(447160 91015, 447160 91115)',27700),'4A'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_4'),'2','brand B','2013-12-12',st_geomfromtext('LINESTRING(447200 91015, 447200 91115)',27700),'4B');
+
+--/*  Create the worker data */
+insert into zcfbnji.workers
+(worker_name,worker_surname,date_of_birth,worker_position,contact_email)
+values
+('Jack','Smith','1980-08-19','part_time','JackSmith@farm.com'),
+
+('Yanjun','Ni','2003-01-21','apprentice','YnajunNi@farm.com'),
+('Vladimir','Abdulov','2003-02-13','apprentice','VladimirAbdulov@farm.com'),
+
+('Umair','Abbas','1989-09-01','full_time','UmairAbbas@farm.com');
+
+
+--/* Create the greenhouse data */
+insert into zcfbnji.greenhouse_condition
+(greenhouse_id,cover_material_condition,frame_condition,worker_id,report_date)
+values
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_1'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-12-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_1'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Vivian'),'2021-06-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_2'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-06-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_2'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-12-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_3'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-06-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_3'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-12-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_4'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-06-01'),
+
+((select greenhouse_id from zcfbnji.greenhouse where greenhouse_name = 'greenhouse_4'), 
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%mediocre%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-12-01');
+
+insert into zcfbnji.drip_irrigation_system_condition
+(drip_irrigation_system_id,valve_condition,pressure_gage_condition,filter_condition,drip_tubing_condition,emitter_condition,worker_id,report_date)
+values
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Yanjun'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Jack'),'2021-06-02'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Jack'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Jack'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%mediocre%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%mediocre%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '1C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-07-01'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '2C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Susie'),'2021-06-01'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%mediocre%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%mediocre%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '3C'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%acceptable%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-06-01'),
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '4A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '4A'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-06-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '4B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-12-01'),
+
+((select drip_irrigation_system_id from zcfbnji.drip_irrigation_system where coding_name = '4B'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),
+(select condition_description_id from zcfbnji.condition_description where condition_description like '%good%'),(select worker_id from zcfbnji.workers where worker_name = 'Vladimir'),'2021-06-01');
+
+--/* Create the salary data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'salary','part_time',1000,'£ per year','2020-01-01'),
+('cost', 'salary','apprentice',3000,'£ per year','2020-01-01'),
+('cost', 'salary','full_time',20000,'£ per year','2020-01-01');
+
+--/* Create the material cost data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'material','glass',4,'£ per meter square','2020-01-01'),
+('cost', 'material','polyethylene',2,'£ per meter square','2020-01-01'),
+('cost', 'material','polycarbonate',3,'£ per meter square','2020-01-01');
+
+--/* Create the equipment cost data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'drip_irrigation_system','brand A',200,'£ per meter','2020-01-01'),
+('cost', 'drip_irrigation_system','brand B',250,'£ per meter','2020-01-01');
+
+--/* Create the water cost data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'water','agricultural',0.004,'£ per litre','2021-12-01');
+
+--/* Create the fertiliser cost data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'fertiliser','brand UK',0.2,'£ per kg','2021-06-01'),
+('cost', 'fertiliser','brand EU',0.5,'£ per kg','2021-06-01');
+
+--/* Create the investment cost data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('cost', 'investment','transfer_of_farm',100000,'£','2019-12-31');
+
+--/* Create the cultivation cycle data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('time', 'cultivation cycle','potato',90,'day','2021-06-01'),
+('time', 'cultivation cycle','pepper',100,'day','2021-06-01');
+
+--/* Create the crops price data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('price', 'crops','potato',0.4,'£ per kg','2021-12-01'),
+('price', 'crops','pepper',3.7,'£ per kg','2021-12-01');
+
+--/* Create the empirical production multiplier data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('empirical production multiplier', 'fertiliser','brand UK',1.0,'n/a','2021-12-01'),
+('empirical production multiplier', 'fertiliser','brand EU',1.1,'n/a','2021-12-01'),
+('empirical production multiplier', 'material','glass',1.0,'n/a','2021-12-01'),
+('empirical production multiplier', 'material','polyethylene',0.8,'n/a','2021-12-01'),
+('empirical production multiplier', 'material','polycarbonate',0.7,'n/a','2021-12-01'),
+('empirical production multiplier', 'drip_irrigation_system','brand A',1.0,'n/a','2021-12-01'),
+('empirical production multiplier', 'drip_irrigation_system','brand B',0.85,'n/a','2021-12-01');
+
+--/* Create the usage data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('usage', 'fertiliser','potato',0.05,'kg per square meter','2021-12-01'),
+('usage', 'water','potato',77,'kg per kg potato production','2021-12-01'),
+('usage', 'fertiliser','pepper',0.02,'kg per square meter','2021-12-01'),
+('usage', 'water','pepper',25,'kg per kg potato production','2021-12-01');
+
+--/* Create the production data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('production', 'crops','pepper',2000,'kg per year per 4 greenhous','2021-12-31'),
+('production', 'crops','potato',280000,'kg per per year 4 greenhouse','2021-12-31');
+
+--/* Create the optimal system data */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('number','asset_per_area','DIS',4050,'m^2 per one','2008-12-31');
+
+--/* cover material lifespan */
+insert into zcfbnji.parameters
+(parameter_type,parameter_name,parameter_secondary_specification,parameter_numeric_quantity,parameter_unit,input_date)
+values
+('time','life_span','glass',10,'years','2010-05-01'),
+('time','life_span','polyethylene',5,'years','2010-05-01'),
+('time','life_span','polycarbonate',4,'years','2010-05-01');

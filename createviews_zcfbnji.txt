@@ -1,0 +1,37 @@
+DROP VIEW IF exists zcfbnji.farmland_and_greenhouse;
+DROP VIEW if exists zcfbnji.greenhouse_and_dis;
+DROP VIEW if exists zcfbnji.greenhouse_and_dis2;
+DROP VIEW if exists zcfbnji.drip_irrigation_system_details_condition;
+DROP VIEW if exists zcfbnji.greenhouse_details_condition;
+DROP VIEW if exists zcfbnji.annual_resource_consumption_crops;
+
+
+create view zcfbnji.drip_irrigation_system_details_condition as
+select a.greenhouse_id, a.drip_irrigation_system_id as drip_irrigation_system_id, a.coding_name, a.manufacturer,a.location, b.report_date, b.drip_irrigation_system_id as system_id_in_condition, 
+(b.valve_condition+b.pressure_gage_condition+b.filter_condition+b.drip_tubing_condition+b.emitter_condition)::decimal/5 as average_condition,
+b.valve_condition,b.pressure_gage_condition,b.filter_condition,b.drip_tubing_condition,b.emitter_condition,b.drip_irrigation_system_condition_id, b.worker_id
+from zcfbnji.drip_irrigation_system a inner join zcfbnji.drip_irrigation_system_condition b
+on a.drip_irrigation_system_id = b.drip_irrigation_system_id;
+
+create view zcfbnji.greenhouse_details_condition as
+select a.greenhouse_id as greenhouse_id, a.greenhouse_name, b.greenhouse_id as greenhouse_id_in_condition, 
+(b.cover_material_condition + b.frame_condition)::decimal/2 as average_condition
+from zcfbnji.greenhouse a inner join zcfbnji.greenhouse_condition b
+on a.greenhouse_id = b.greenhouse_id;
+
+create view zcfbnji.annual_resource_consumption_crops as
+select parameter_numeric_quantity * 100 as potato_fertiliser_consumption 
+from zcfbnji.parameters where parameter_type = 'usage' and parameter_name = 'fertiliser' and parameter_secondary_specification = 'potato';
+
+create view zcfbnji.greenhouse_and_dis as 
+select a.greenhouse_id, a.crops_type, b.coding_name as dis_coding_name, b.manufacturer as dis_manufacturer, b.drip_irrigation_system_id, b.location as dis_location from zcfbnji.greenhouse a INNER JOIN 
+zcfbnji.drip_irrigation_system_details_condition b on a.greenhouse_id = b.greenhouse_id;
+
+create view zcfbnji.farmland_and_greenhouse as 
+select a.location as farmland_location, a.farmland_id, b.location_2d as greenhouse_land_cover from zcfbnji.farmland a INNER JOIN
+zcfbnji.greenhouse b on a.farmland_id = b.farmland_id;
+
+
+create view zcfbnji.greenhouse_and_dis2 as 
+select a.greenhouse_id, b.coding_name from zcfbnji.greenhouse a INNER JOIN zcfbnji.drip_irrigation_system b on a.greenhouse_id=b.greenhouse_id;
+

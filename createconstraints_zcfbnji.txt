@@ -1,49 +1,114 @@
-/* add primary key:*/
-alter table zcfbnji.bus_station add constraint bus_station_pk primary key (bus_station_id);
+--================================================================
+/* PRIMARY KEY:*/
+--================================================================
+/* add primary key, farmland:*/
+alter table zcfbnji.farmland add constraint farmland_pk primary key (farmland_id);
 
-alter table zcfbnji.bus_station add constraint bus_station_unique unique(location);
+/* add primary key, greenhouse:*/
+alter table zcfbnji.greenhouse add constraint greenhouse_pk primary key (greenhouse_id);
 
-/* add primary and foreign key:*/
-alter table zcfbnji.waiting_room add constraint waiting_room_pk primary key (waiting_room_id);
-alter table zcfbnji.waiting_room add constraint waiting_room_fk foreign key (bus_station_id)
-references zcfbnji.bus_station(bus_station_id);
+/* add primary key, drip_irrigation_systems:*/
+alter table zcfbnji.drip_irrigation_system add constraint drip_irrigation_system_pk primary key (drip_irrigation_system_id);
 
-alter table zcfbnji.waiting_room add constraint waiting_room_unique unique(location);
+/* add primary key, workers:*/
+alter table zcfbnji.workers add constraint worker_pk primary key (worker_id);
 
-/* add primary and foreign key:*/
-alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_pk primary key (sensor_id);
-alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_fk foreign key (waiting_room_id)
-references zcfbnji.waiting_room(waiting_room_id);
+/* add primary key, parameters:*/
+alter table zcfbnji.parameters add constraint parameter_pk primary key (parameter_id);
 
-alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_unique unique(location);
+/* add primary key, drip_irrigation_system_condition:*/
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_pk primary key (drip_irrigation_system_condition_id);
+
+/* add primary key, greenhouse_condition:*/
+alter table zcfbnji.greenhouse_condition add constraint greenhouse_condition_pk primary key (greenhouse_condition_id);
+
+/* add primary key, greenhouse_condition:*/
+alter table zcfbnji.condition_description add constraint condition_description_pk primary key (condition_description_id);
+
+/* add primary key, criticality:*/
+alter table zcfbnji.criticality add constraint criticality_pk primary key (criticality_id);
+
+--================================================================
+/* FOREIGN KEY:*/
+--================================================================
+/* add foreign key, greenhouses:*/
+alter table zcfbnji.greenhouse add constraint greenhouse_fk foreign key (farmland_id)
+references zcfbnji.farmland(farmland_id);
+
+alter table zcfbnji.greenhouse add constraint greenhouse_fk_2 foreign key (criticality)
+references zcfbnji.criticality(criticality_id);
+
+/* add foreign key, drip_irrigation_systems:*/
+alter table zcfbnji.drip_irrigation_system add constraint drip_irrigation_systems_fk foreign key (greenhouse_id)
+references zcfbnji.greenhouse(greenhouse_id);
+
+alter table zcfbnji.drip_irrigation_system add constraint greenhouse_fk_2 foreign key (criticality)
+references zcfbnji.criticality(criticality_id);
 
 
-/* add primary and foreign key:*/
-alter table zcfbnji.air_quality_values add constraint air_quality_values_pk primary key (air_quality_id);
-alter table zcfbnji.air_quality_values add constraint air_quality_values_fk foreign key (sensor_id)
-references zcfbnji.air_quality_sensors(sensor_id);
+/* add foreign key, greenhouse_condition:*/
+alter table zcfbnji.greenhouse_condition add constraint greenhouse_condition_fk foreign key (greenhouse_id)
+references zcfbnji.greenhouse(greenhouse_id);
 
-/* add unique constraint:*/
-alter table zcfbnji.air_quality_values add constraint air_quality_values_unique unique(reading_timestamp,sensor_id);
+alter table zcfbnji.greenhouse_condition add constraint greenhouse_condition_fk_2 foreign key (cover_material_condition)
+references zcfbnji.condition_description(condition_description_id);
 
-/* add unique constraint:*/
-alter table zcfbnji.cleaners add constraint cleaner_unique unique (cleaner_name,cleaner_surname,date_of_birth);
+alter table zcfbnji.greenhouse_condition add constraint greenhouse_condition_fk_3 foreign key (frame_condition)
+references zcfbnji.condition_description(condition_description_id);
 
-/* add primary and foreign key:*/
-alter table zcfbnji.cleaners add constraint cleaner_pk primary key (cleaner_id);
+/* add foreign key, drip_irrigation_system_condition:*/
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk foreign key (drip_irrigation_system_id)
+references zcfbnji.drip_irrigation_system(drip_irrigation_system_id);
 
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk_2 foreign key (valve_condition)
+references zcfbnji.condition_description(condition_description_id);
 
-/* add unique constraint:*/
-alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_unique unique (bus_station_id,cleaner_id);
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk_3 foreign key (pressure_gage_condition)
+references zcfbnji.condition_description(condition_description_id);
+
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk_4 foreign key (filter_condition)
+references zcfbnji.condition_description(condition_description_id);
+
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk_5 foreign key (drip_tubing_condition)
+references zcfbnji.condition_description(condition_description_id);
+
+alter table zcfbnji.drip_irrigation_system_condition add constraint drip_irrigation_system_condition_fk_6 foreign key (emitter_condition)
+references zcfbnji.condition_description(condition_description_id);
+
+--================================================================
+/*UNIQUE CONSTRAINT:*/
+--================================================================
+/*NO TWO GREENHOUSES SHOULD SHARE A SAME LOCATION:*/
+alter table zcfbnji.greenhouse add constraint greenhouse_unique 
+unique (location_2d,location_3d);
+
+/*NO TWO DRIP IRRIGATION SYSTEMS SHOULD SHARE A SAME LOCATION:*/
+alter table zcfbnji.drip_irrigation_system add constraint drip_irrigation_system_unique 
+unique (location);
+
+/*NO TWO FARM SHOULD SHARE A SAME LOCATION:*/
+alter table zcfbnji.farmland add constraint farmland_unique 
+unique (location);
+
+/* avoid replicate criticality_description */
+alter table zcfbnji.criticality add constraint criticality_unique 
+unique (criticality_description);
+
+/* avoid replicate condition_description */
+alter table zcfbnji.condition_description add constraint condition_description_unique 
+unique (condition_description);
+
+/* we can not have a condition report about a drip irrigation system condition for the same system on the same day and by the same worker */
+alter table zcfbnji.drip_irrigation_system_condition
+	add constraint drip_irrigation_system_condition_unique
+	unique(worker_id, report_date, drip_irrigation_system_id);
 	
-/* add primary and foreign key:*/
-alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_pk primary key (bus_station_cleaner_id);
-
-alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_fk foreign key (cleaner_id)
-references zcfbnji.cleaners(cleaner_id);
-
-alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_fk_2 foreign key (bus_station_id)
-references zcfbnji.bus_station(bus_station_id);
-
-/* add check constraint:*/
-alter table zcfbnji.bus_station_cleaner add constraint check_bus_station_cleaner check (hours_per_week<49);
+/* we can not have a condition report about a greenhouse condition for the same system on the same day and by the same worker */
+alter table zcfbnji.greenhouse_condition
+	add constraint greenhouse_condition_unique
+	unique(worker_id, report_date, greenhouse_id);
+	
+/* the parameters table - combination of all parameter elements that are sensitive to recorded date must be unique */
+alter table zcfbnji.parameters
+	add constraint parameters_unique 
+	unique(parameter_type, parameter_name, parameter_secondary_specification, input_date);

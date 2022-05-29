@@ -1,0 +1,253 @@
+-- get latest condition report of drip irrigation system
+with latest_condition_dis as 
+(select distinct on(drip_irrigation_system_id) drip_irrigation_system_id, average_condition,valve_condition,pressure_gage_condition,filter_condition,drip_tubing_condition,emitter_condition,report_date, drip_irrigation_system_condition_id,worker_id
+from zcfbnji.drip_irrigation_system_details_condition 
+order by drip_irrigation_system_id, report_date desc),
+
+-- get second latest condition report of drip irrigation system
+second_latest_condition_dis as (
+select distinct on(drip_irrigation_system_id) drip_irrigation_system_id, average_condition, valve_condition,pressure_gage_condition,filter_condition,drip_tubing_condition,emitter_condition, report_date,worker_id,drip_irrigation_system_condition_id
+from zcfbnji.drip_irrigation_system_details_condition where report_date < (select max(report_date) from
+zcfbnji.drip_irrigation_system_details_condition)
+order by drip_irrigation_system_id, report_date desc),
+
+-- list condition reports for each greenhouse on different date together
+comprison_table as (
+select a.drip_irrigation_system_id, a.valve_condition as early_valve_condition, a.pressure_gage_condition as early_pressure_gage_condition, a.filter_condition as early_filter_condition,
+a.drip_tubing_condition as early_drip_tubing_condition, a.emitter_condition as early_emitter_condition,a.average_condition as early_ave_condition,
+a.report_date as early_report_date,a.drip_irrigation_system_condition_id as latest_report_id ,a.worker_id as worker_id_later,
+	b.report_date as later_report_date,
+b.valve_condition as later_valve_condition, b.pressure_gage_condition as later_pressure_gage_condition, b.filter_condition as later_filter_condition,
+b.drip_tubing_condition as later_drip_tubing_condition, b.emitter_condition as later_emitter_condition,b.average_condition as later_ave_condition, b.worker_id as worker_id_early, b.drip_irrigation_system_condition_id as early_report_id
+from second_latest_condition_dis a INNER JOIN latest_condition_dis b on a.drip_irrigation_system_id = b.drip_irrigation_system_id),
+
+--find contradictory reports (i.e. condition of an asset usually will not improve by itself over a period of time)
+contradictory_report as (
+select a.latest_report_id, b.coding_name, a.worker_id_later, a.worker_id_early, a.drip_irrigation_system_id, a.early_report_id from comprison_table a INNER JOIN zcfbnji.drip_irrigation_system b on a.drip_irrigation_system_id=b.drip_irrigation_system_id
+where a.later_valve_condition < a.early_valve_condition or a.later_pressure_gage_condition < a.early_pressure_gage_condition or
+a.later_filter_condition < a.early_filter_condition or a.later_drip_tubing_condition < a.early_drip_tubing_condition or a.later_emitter_condition < a.early_emitter_condition or a.later_ave_condition < a.early_ave_condition)
+
+--find workers who are responsible for making contradictory reports
+select a.latest_report_id,a.early_report_id, b.worker_name as worker_name_for_early_report, b.contact_email as email_of_worker_early_report, c.worker_name as worker_name_for_later_report,
+c.contact_email as email_of_worker_latest_report from contradictory_report a 
+INNER JOIN zcfbnji.workers b on a.worker_id_early = b.worker_id 
+INNER JOIN zcfbnji.workers c on a.worker_id_later = c.worker_id;
+
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+--find optimal number of drip irrigation systems in each greenhouse */
+with optimal_system as 
+(select a.greenhouse_id, round(st_area(a.location_2d)/b.parameter_numeric_quantity) as optimal_dis_per_greenhouse
+from zcfbnji.greenhouse a, zcfbnji.parameters b 
+where parameter_type = 'number' and parameter_name = 'asset_per_area' and parameter_secondary_specification = 'DIS'),
+
+-- find current number of drip irrigation systems in each greenhouse */
+reality_system as 
+(select greenhouse_id, count(*) as num_dis
+from zcfbnji.greenhouse_and_dis2
+group by greenhouse_id),
+
+-- find how many systems need to be installed (positive number) or removed (negative number) to achieve optimal */
+optimal_vs_reality as 
+(select a.greenhouse_id, b.optimal_dis_per_greenhouse - a.num_dis as vacancy_number 
+ from reality_system a INNER JOIN optimal_system b on a.greenhouse_id =b.greenhouse_id)
+
+-- find installation cost ,exclude any negative value (removal requirement) to make the cost sensible  */
+select a.*, case when a.vacancy_number <0 then 0 else a.vacancy_number end
+* b.parameter_numeric_quantity as cost_for_achieving_optimal_condition_£ from optimal_vs_reality a, zcfbnji.parameters b 
+where parameter_type = 'number' and parameter_name = 'asset_per_area' and parameter_secondary_specification = 'DIS';
+
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with fertiliser_consumption_potato_per_meter_square as
+(select a.parameter_numeric_quantity  as potato_fertiliser_consumption 
+from zcfbnji.parameters a where parameter_type = 'usage' and parameter_name = 'fertiliser' and parameter_secondary_specification = 'potato'),
+
+annual_fertiliser_consumption_potato as --location_2d is the land cover area of the greenhouse while location_3d is the structural geometry of the greenhouse
+(select sum(a.potato_fertiliser_consumption * st_area(b.location_2d)) as annual_potato_fertiliser_consumption 
+from fertiliser_consumption_potato_per_meter_square a, zcfbnji.greenhouse b where crops_type = 'potato'),
+
+annual_potato_fertiliser_cost as ( --calculate fertiliser cost based on total consumption and price
+select a.annual_potato_fertiliser_consumption * b.parameter_numeric_quantity as annual_potato_fertiliser_cost from annual_fertiliser_consumption_potato a, zcfbnji.parameters b where 
+parameter_type = 'cost' and parameter_name = 'fertiliser' and parameter_secondary_specification = 'brand UK'),
+-------------------------------------------------------------
+water_consumption_potato_per_kg_production as
+(select a.parameter_numeric_quantity  as potato_water_consumption 
+from zcfbnji.parameters a where parameter_type = 'usage' and parameter_name = 'water' and parameter_secondary_specification = 'potato'),
+
+annual_water_consumption_potato as 
+(select sum(a.potato_water_consumption * b.parameter_numeric_quantity) as annual_potato_water_consumption 
+from water_consumption_potato_per_kg_production a, zcfbnji.parameters b where 
+parameter_type = 'production' and parameter_name = 'crops' and parameter_secondary_specification = 'potato'),
+
+annual_potato_water_cost as ( --calculate irrigation water cost based on total consumption and price
+select a.annual_potato_water_consumption * b.parameter_numeric_quantity as annual_potato_water_cost from annual_water_consumption_potato a, zcfbnji.parameters b where 
+parameter_type = 'cost' and parameter_name = 'water' and parameter_secondary_specification = 'agricultural'),
+
+
+-------------------------------------------------------------
+fertiliser_consumption_pepper_per_meter_square as
+(select a.parameter_numeric_quantity  as pepper_fertiliser_consumption 
+from zcfbnji.parameters a where parameter_type = 'usage' and parameter_name = 'fertiliser' and parameter_secondary_specification = 'pepper'),
+
+annual_fertiliser_consumption_pepper as 
+(select a.pepper_fertiliser_consumption * st_area(b.location_2d) as annual_pepper_fertiliser_consumption 
+from fertiliser_consumption_pepper_per_meter_square a, zcfbnji.greenhouse b where crops_type = 'pepper'),
+
+annual_pepper_fertiliser_cost as ( --calculate fertiliser cost based on total consumption and price
+select a.annual_pepper_fertiliser_consumption * b.parameter_numeric_quantity as annual_pepper_fertiliser_cost from annual_fertiliser_consumption_pepper a, zcfbnji.parameters b where 
+parameter_type = 'cost' and parameter_name = 'fertiliser' and parameter_secondary_specification = 'brand UK'),
+-------------------------------------------------------------
+
+water_consumption_pepper_per_kg_production as
+(select a.parameter_numeric_quantity  as pepper_water_consumption 
+from zcfbnji.parameters a where parameter_type = 'usage' and parameter_name = 'water' and parameter_secondary_specification = 'pepper'),
+
+annual_water_consumption_pepper as 
+(select sum(a.pepper_water_consumption * b.parameter_numeric_quantity) as annual_pepper_water_consumption 
+from water_consumption_pepper_per_kg_production a, zcfbnji.parameters b where 
+parameter_type = 'production' and parameter_name = 'crops' and parameter_secondary_specification = 'pepper'),
+
+annual_pepper_water_cost as ( --calculate irrigation water cost based on total consumption and price
+select a.annual_pepper_water_consumption * b.parameter_numeric_quantity as annual_pepper_water_cost from annual_water_consumption_pepper a, zcfbnji.parameters b where 
+parameter_type = 'cost' and parameter_name = 'water' and parameter_secondary_specification = 'agricultural'),
+
+total_annual_material_cost as --water cost plus fertiliser cost equal total material cost
+(select a.annual_potato_fertiliser_cost + b.annual_potato_water_cost + c.annual_pepper_fertiliser_cost + d.annual_pepper_water_cost  as total_annual_material_cost
+from annual_potato_fertiliser_cost a, annual_potato_water_cost b, annual_pepper_fertiliser_cost c, annual_pepper_water_cost d),
+
+-------------------------------------------------------------
+
+number_of_position as ( --get worker number of each position (rank)
+select worker_position, count(*) from zcfbnji.workers group by worker_position),
+
+cost_part_time as (
+select parameter_numeric_quantity from zcfbnji.parameters where
+parameter_type = 'cost' and parameter_name = 'salary' and parameter_secondary_specification = 'part_time'),
+
+total_cost_part_time as (
+select a.count * b.parameter_numeric_quantity as total_part_time_cost from number_of_position a, cost_part_time b where worker_position = 'part_time'),
+
+cost_full_time as (
+select parameter_numeric_quantity from zcfbnji.parameters where
+parameter_type = 'cost' and parameter_name = 'salary' and parameter_secondary_specification = 'full_time'),
+
+total_cost_full_time as (
+select a.count * b.parameter_numeric_quantity as total_full_time_cost from number_of_position a, cost_full_time b where worker_position = 'full_time'),
+
+cost_apprentice as (
+select parameter_numeric_quantity from zcfbnji.parameters where
+parameter_type = 'cost' and parameter_name = 'salary' and parameter_secondary_specification = 'apprentice'),
+
+total_cost_apprentice as (
+select a.count * b.parameter_numeric_quantity as total_apprentice_cost from number_of_position a, cost_apprentice b where worker_position = 'apprentice'),
+
+total_annual_human_resource_cost as (
+select a.total_part_time_cost + b.total_full_time_cost + c.total_apprentice_cost as total_annual_human_resource_cost from
+total_cost_part_time a, total_cost_full_time b, total_cost_apprentice c),
+
+total_cost as ( --get total human resource cost based on worker number and their paycheck
+select a.total_annual_human_resource_cost + b.total_annual_material_cost as total_cost from total_annual_material_cost b, total_annual_human_resource_cost a),
+
+-------------------------------------------------------------
+total_potato_production as ( select parameter_numeric_quantity as total_potato_production from zcfbnji.parameters where
+parameter_type = 'production' and parameter_name = 'crops' and parameter_secondary_specification = 'potato' and input_date = '2021-12-31'),
+
+total_potato_sell as (  --use production data and markert price to get sell number
+select a.total_potato_production * b.parameter_numeric_quantity as total_potato_sell from total_potato_production a, zcfbnji.parameters b where 
+parameter_type = 'price' and parameter_name = 'crops' and parameter_secondary_specification = 'potato'),
+
+total_pepper_production as ( select parameter_numeric_quantity as total_pepper_production from zcfbnji.parameters where
+parameter_type = 'production' and parameter_name = 'crops' and parameter_secondary_specification = 'pepper' and input_date = '2021-12-31'),
+
+total_pepper_sell as ( --use production data and markert price to get sell number
+select a.total_pepper_production * b.parameter_numeric_quantity as total_pepper_sell from total_pepper_production a, zcfbnji.parameters b where 
+parameter_type = 'price' and parameter_name = 'crops' and parameter_secondary_specification = 'pepper'),
+
+total_income as (  --total income is the sum of selling all crops
+select a.total_potato_sell + b.total_pepper_sell as total_income from total_potato_sell a, total_pepper_sell b),
+
+net_income_last_year as ( --total income minius cost equals net income
+select a.total_income - b.total_cost as net_income_last_year_£ from total_income a , total_cost b),
+
+initial_investment as (
+select parameter_numeric_quantity as initial_investment from zcfbnji.parameters 
+where parameter_type = 'cost' and parameter_name = 'investment' and parameter_secondary_specification = 'transfer_of_farm')
+
+select a.initial_investment as initial_investment_£ ,b.net_income_last_year_£, a.initial_investment/b.net_income_last_year_£ as pay_back_period_years from initial_investment a, net_income_last_year b
+;
+
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with affected_greenhouse as ( --brand B drip_irrigation_system influence potato
+select distinct greenhouse_id from zcfbnji.greenhouse_and_dis where crops_type = 'potato'
+except
+select distinct greenhouse_id from zcfbnji.greenhouse_and_dis where dis_manufacturer != 'brand B'),
+
+dis_need_removal as ( --dis = drip irrigation system
+select dis_coding_name from zcfbnji.greenhouse_and_dis where greenhouse_id IN (select greenhouse_id from affected_greenhouse)),
+
+dis_need_removal_details as (
+select a.drip_irrigation_system_id, a.manufacturer, a.location , a.greenhouse_id from
+zcfbnji.drip_irrigation_system a where coding_name in (select dis_coding_name from dis_need_removal))
+
+select a.drip_irrigation_system_id, a.manufacturer, st_astext(a.location) as dis_location, b.greenhouse_id,  --direct workers to incidents locations
+st_astext(b.location_3d) as greenhouse_location_3d from dis_need_removal_details a INNER JOIN zcfbnji.greenhouse b ON st_3dintersects(a.location, b.location_3d);
+
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with polyethylene_greenhouse as (
+select greenhouse_id from zcfbnji.greenhouse where material = 'polyethylene'),
+
+greenhouse_material_cover_area as (
+select a.material, a.greenhouse_id, st_3darea(st_astext(a.location_3d)) - st_area(a.location_2d) as cover_material_area from zcfbnji.greenhouse a --3d area minus 2d area (ground cover) to get cover material area
+LEFT JOIN polyethylene_greenhouse b on a.greenhouse_id = b.greenhouse_id where b.greenhouse_id is null),
+
+cover_cost as ( --find replacement cost for installing polyethylene
+select a.material as current_material, a.greenhouse_id, a.cover_material_area, a.cover_material_area * b.parameter_numeric_quantity as total_cover_cost£ from greenhouse_material_cover_area a, zcfbnji.parameters b where 
+parameter_type = 'cost' and parameter_name = 'material' and parameter_secondary_specification = 'polyethylene')
+
+select * from cover_cost;
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with expansion_area as ( --remaining farmland area when all greenhouses merged
+select sum(st_area(farmland_location))/count(*) - sum(st_area(greenhouse_land_cover)) as expansion_area from zcfbnji.farmland_and_greenhouse),
+
+mega_greenhouse as ( --the total area of merged greenhouse
+select sum(st_area(greenhouse_land_cover)) as mega_greenhouse_area from zcfbnji.farmland_and_greenhouse),
+
+mega_greenhouse_material as ( --cover material required for such a merged greenhouse (following height of one of the original greenhouse)
+select st_zmax(a.location_3d)*sqrt(b.mega_greenhouse_area)*4 + b.mega_greenhouse_area as mega_greenhouse_cover_area 
+from zcfbnji.greenhouse a,  mega_greenhouse b where greenhouse_name = 'greenhouse_1'),
+
+total_original_cover_material as ( --original total cover material used
+select sum(st_3darea(st_astext(a.location_3d)) - st_area(a.location_2d)) as total_original_material_area from zcfbnji.greenhouse a),
+
+left_material as ( --spare material after merging
+select a.total_original_material_area - b.mega_greenhouse_cover_area as spare_material from total_original_cover_material a, mega_greenhouse_material b),
+
+--solve equation x^2 + 20x = spare_material
+new_greenhouse as (
+select (-20+ sqrt(20^2 +4*spare_material))/2 as side_length_of_new_greenhouse from left_material)
+
+select (a.side_length_of_new_greenhouse)^2 as new_greenhouse_land_cover_meter_sqaure, b.expansion_area as expansion_area_meter_sqaure, 
+b.expansion_area>(a.side_length_of_new_greenhouse)^2 as is_expansion_area_enough from new_greenhouse a, expansion_area b;
+
+
+--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+with due_date as (
+select b.greenhouse_id, b.installation_date + a.parameter_numeric_quantity * interval '1 year' as replacement_due_date from zcfbnji.greenhouse b, zcfbnji.parameters a where 
+parameter_type = 'time' and parameter_name = 'life_span' and parameter_secondary_specification = b.material),
+
+replacement_info as (
+select a.replacement_due_date, a.replacement_due_date < now() as is_the_replacement_overdue, b.material,b.greenhouse_id, b.location_3d,b.location_2d from due_date a
+INNER JOIN zcfbnji.greenhouse b on a.greenhouse_id = b.greenhouse_id),
+
+replacement_info_and_cost as (
+select b.parameter_numeric_quantity as cost_per_area, a.* from replacement_info a INNER JOIN zcfbnji.parameters b on a.material = b.parameter_secondary_specification where
+b.parameter_type = 'cost' and b.parameter_name = 'material' )
+
+select a.replacement_due_date, a.is_the_replacement_overdue, a.material, a.greenhouse_id, (st_3darea(st_astext(a.location_3d)) - st_area(a.location_2d))*a.cost_per_area as replacement_cost_£
+from replacement_info_and_cost a
+
+
+
+
+
+
+
