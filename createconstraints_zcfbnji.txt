@@ -1,0 +1,49 @@
+/* add primary key:*/
+alter table zcfbnji.bus_station add constraint bus_station_pk primary key (bus_station_id);
+
+alter table zcfbnji.bus_station add constraint bus_station_unique unique(location);
+
+/* add primary and foreign key:*/
+alter table zcfbnji.waiting_room add constraint waiting_room_pk primary key (waiting_room_id);
+alter table zcfbnji.waiting_room add constraint waiting_room_fk foreign key (bus_station_id)
+references zcfbnji.bus_station(bus_station_id);
+
+alter table zcfbnji.waiting_room add constraint waiting_room_unique unique(location);
+
+/* add primary and foreign key:*/
+alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_pk primary key (sensor_id);
+alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_fk foreign key (waiting_room_id)
+references zcfbnji.waiting_room(waiting_room_id);
+
+alter table zcfbnji.air_quality_sensors add constraint air_quality_sensors_unique unique(location);
+
+
+/* add primary and foreign key:*/
+alter table zcfbnji.air_quality_values add constraint air_quality_values_pk primary key (air_quality_id);
+alter table zcfbnji.air_quality_values add constraint air_quality_values_fk foreign key (sensor_id)
+references zcfbnji.air_quality_sensors(sensor_id);
+
+/* add unique constraint:*/
+alter table zcfbnji.air_quality_values add constraint air_quality_values_unique unique(reading_timestamp,sensor_id);
+
+/* add unique constraint:*/
+alter table zcfbnji.cleaners add constraint cleaner_unique unique (cleaner_name,cleaner_surname,date_of_birth);
+
+/* add primary and foreign key:*/
+alter table zcfbnji.cleaners add constraint cleaner_pk primary key (cleaner_id);
+
+
+/* add unique constraint:*/
+alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_unique unique (bus_station_id,cleaner_id);
+	
+/* add primary and foreign key:*/
+alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_pk primary key (bus_station_cleaner_id);
+
+alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_fk foreign key (cleaner_id)
+references zcfbnji.cleaners(cleaner_id);
+
+alter table zcfbnji.bus_station_cleaner add constraint bus_station_cleaner_fk_2 foreign key (bus_station_id)
+references zcfbnji.bus_station(bus_station_id);
+
+/* add check constraint:*/
+alter table zcfbnji.bus_station_cleaner add constraint check_bus_station_cleaner check (hours_per_week<49);

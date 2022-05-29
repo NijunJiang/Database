@@ -1,0 +1,63 @@
+DELETE FROM zcfbnji.cleaners;
+DELETE FROM zcfbnji.air_quality_values;
+DELETE FROM zcfbnji.air_quality_sensors;
+DELETE FROM zcfbnji.waiting_room;
+DELETE FROM zcfbnji.bus_station;
+/* %%%%%%%%%%%%%%%%%%% INSERT DATA BUS STATION %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.bus_station
+(location, name, last_repainted)
+values
+(st_geomfromtext('POLYGON((500000 500000,500000 500250,500250 500250,500250 500000,500000 500000))',27700),'Main Bus Station', '2019-3-20');
+
+/* %%%%%%%%%%%%%%%%%%% INSERT DATA WAITING ROOM %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.waiting_room
+(bus_station_id, location, opening_time, closing_time)
+values
+((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
+ st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700),
+6.3,17.3);
+
+/* %%%%%%%%%%%%%%%%%%% INSERT AIR QUALITY SENSORS %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.air_quality_sensors
+(location, sensor_make, sensor_installation_date, waiting_room_id)
+values
+(st_geomfromtext('POINT(500051 500051)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
+where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700))),
+
+(st_geomfromtext('POINT(500055 500140)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
+where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700))),
+
+(st_geomfromtext('POINT(500140 500140)',27700),'UCL Sensors','20190202', (select waiting_room_id from zcfbnji.waiting_room 
+where location = st_geomfromtext('POLYGON((500050 500050,500050 500150,500150 500150,500150 500050,500050 500050))',27700)));
+
+/* %%%%%%%%%%%%%%%%%%% INSERT AIR QUALITY VALUES %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.air_quality_values
+(sensor_id,total_voc,reading_timestamp,temperature,humidity)
+values
+((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500051 500051)',27700)),300,'2020-04-18',33.5,75),
+((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),270,'2020-04-19',33.5,75),
+((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),170,'2020-06-18',16.5,75),
+((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),300,'2020-04-18',33.5,75),
+((select sensor_id from zcfbnji.air_quality_sensors where location = st_geomfromtext('POINT(500055 500140)',27700)),670,'2020-06-19',17.5,75);
+
+/* %%%%%%%%%%%%%%%%%%% INSERT CLEANER %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.cleaners
+(cleaner_name,cleaner_surname,date_of_birth,contact_number,cost_per_hour)
+values
+('Joe','Bloggs','1970-02-23','0122322122',33.5),
+('Sarah','Smith','1992-05-23','0122886673',33.5),
+('Mary','Brown','1967-02-12','0166327531',13.5);
+
+/* %%%%%%%%%%%%%%%%%%% INSERT BUS STATION CLEANER %%%%%%%%%%%%%%%%%%%%%%% */
+insert into zcfbnji.bus_station_cleaner
+(bus_station_id,cleaner_id,hours_per_week)
+values
+((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
+ (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Sarah'
+and cleaner_surname = 'Smith' and date_of_birth = '1992-05-23'), 25),
+((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
+ (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Mary'
+and cleaner_surname = 'Brown' and date_of_birth = '1967-02-12'), 35),
+((select bus_station_id from zcfbnji.bus_station where name = 'Main Bus Station'),
+ (select cleaner_id from zcfbnji.cleaners where cleaner_name = 'Joe'
+and cleaner_surname = 'Bloggs' and date_of_birth = '1970-02-23'), 42);

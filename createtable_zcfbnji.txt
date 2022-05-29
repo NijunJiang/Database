@@ -1,0 +1,76 @@
+drop schema if exists zcfbnji cascade;
+create schema zcfbnji;
+/* create table bus_station in scheme zcfbnji:*/
+create table zcfbnji.bus_station (
+	bus_station_id serial not null,
+	last_repainted date not null,
+	name character varying (50) not null );
+/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','bus_station','location',27700,'polygon','2');
+
+
+/* add unique constraint:*/
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+/* create table waiting_room in scheme zcfbnji:*/
+create table zcfbnji.waiting_room (
+	waiting_room_id serial not null,
+	opening_time double precision not null,
+	closing_time double precision not null,
+	bus_station_id integer not null );
+
+/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','waiting_room','location',27700,'polygon','2');
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+/* create table air_quality_sensors in scheme zcfbnji:*/
+create table zcfbnji.air_quality_sensors (
+	sensor_id serial not null,
+	waiting_room_id integer not null,
+	sensor_installation_date integer not null,
+	sensor_make character varying (150) not null );
+	
+/* add geometry column:*/
+select AddGeometryColumn('zcfbnji','air_quality_sensors','location',27700,'point','2');
+
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+/* create table air_quality_values in scheme zcfbnji:*/
+create table zcfbnji.air_quality_values (
+	air_quality_id serial not null,
+	sensor_id integer not null,
+	total_voc double precision not null,
+	temperature double precision not null,
+	humidity double precision not null,
+	reading_timestamp date not null );
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+create table zcfbnji.cleaners (
+	cleaner_id serial not null,
+	cleaner_name character varying (150) not null,
+	cleaner_surname character varying (100) not null,
+	date_of_birth date not null,
+	contact_number character varying (50) not null,
+	cost_per_hour double precision not null);
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
+create table zcfbnji.bus_station_cleaner (
+	bus_station_id integer not null,
+	cleaner_id integer not null,
+	bus_station_cleaner_id serial not null,
+	hours_per_week double precision not null );
+
+
+
+/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%SPERATING LINES%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+
